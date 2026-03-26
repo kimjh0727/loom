@@ -6,6 +6,6 @@ export const EVENTS = {
 } as const;
 
 export interface PtyDataPayload {
-  paneId: string;
+  pane_id: string;
   data: string;
 }
