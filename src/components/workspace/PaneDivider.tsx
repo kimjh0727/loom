@@ -34,17 +34,16 @@ export default function PaneDivider({ direction, containerRef, onRatioChange }: 
       onMouseLeave={() => setIsHovered(false)}
       style={{
         flexShrink: 0,
-        [isHorizontal ? "width" : "height"]: isActive ? 4 : 3,
+        [isHorizontal ? "width" : "height"]: 5,
         [isHorizontal ? "height" : "width"]: "100%",
-        background: isActive ? "var(--divider-hover)" : "var(--divider-bg)",
+        background: isActive ? "var(--accent)" : "transparent",
         cursor: isHorizontal ? "col-resize" : "row-resize",
-        transition: "background var(--transition-fast), width var(--transition-fast), height var(--transition-fast)",
-        zIndex: 1,
+        transition: "background var(--transition-fast)",
+        zIndex: 2,
         position: "relative",
-        // 클릭 영역을 넓혀서 드래그 쉽게
-        margin: isHorizontal ? "0 -2px" : "-2px 0",
-        padding: isHorizontal ? "0 2px" : "2px 0",
-        boxSizing: "content-box",
+        // 가운데 선으로 시각 표시
+        borderLeft: isHorizontal && !isActive ? "1px solid var(--border)" : undefined,
+        borderTop: !isHorizontal && !isActive ? "1px solid var(--border)" : undefined,
       }}
     />
   );
