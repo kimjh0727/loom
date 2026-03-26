@@ -587,6 +587,51 @@ interface WorkspaceSnapshot {
 
 ---
 
+### Windows/WSL PTY 호환성 주의사항 (전 Phase 공통)
+
+> **이 섹션은 구현 전에 반드시 확인할 것**
+> macOS cmux는 Ghostty/libghostty가 PTY를 직접 관리하므로 이런 문제가 없음.
+> Loom은 portable-pty를 사용하고 WSL 환경에서 동작하므로 아래 차이를 항상 반영해야 함.
+
+#### xterm.js 키 입력 정규화 (TerminalPane.tsx `onData` 필수)
+
+```typescript
+// ❌ 그냥 data를 그대로 쓰면 안 됨
+writeToPane(paneId, data)
+
+// ✅ 반드시 정규화 후 전송
+const normalized = data === "\x7f" ? "\x08"   // Backspace: DEL→BS
+                 : data === "\r"   ? "\n"      // Enter: CR→LF
+                 : data;
+writeToPane(paneId, normalized)
+```
+
+| xterm.js 전송값 | 문제 | 해결 |
+|---|---|---|
+| Backspace → `\x7f` (DEL) | portable-pty PTY erase 기본값이 `\x08`(BS)이므로 백스페이스 무반응 | `\x08`로 변환 |
+| Enter → `\r` (CR) | PTY의 `icrnl`(CR→LF 변환) 미설정 시 bash가 실행 명령으로 인식 못함, 커서만 줄 처음으로 이동 | `\n`으로 변환 |
+
+#### xterm.js Terminal 옵션 필수 설정
+
+```typescript
+new Terminal({
+  convertEol: true,  // 필수: PTY 출력의 \n을 \r\n으로 변환
+                     // portable-pty의 onlcr(NL→CRNL) 미설정 환경 대응
+  // ... 나머지 옵션
+})
+```
+
+#### PTY 환경변수 필수 주입 (manager.rs)
+
+```rust
+("TERM", "xterm-256color")       // 없으면 색상/키 시퀀스 오작동
+("LOOM_PIPE_PATH", ...)          // IPC 연결용
+("LOOM_WORKSPACE_ID", ...)
+("LOOM_PANE_ID", ...)
+```
+
+---
+
 ### 분할 레이아웃 (Phase 3 참조)
 
 **원본:** Bonsplit 프레임워크 사용 (macOS 전용) → **Loom:** 직접 구현
