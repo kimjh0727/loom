@@ -24,7 +24,6 @@ export default function TerminalPane({
   onClose,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const spawnedRef = useRef(false);
 
   const { write, writeln, termRef } = useTerminal(containerRef, {
     onSplitRight,
@@ -45,15 +44,12 @@ export default function TerminalPane({
     },
   });
 
-  // PTY spawn (Tauri 환경에서만 동작)
+  // PTY spawn: 마운트 시 spawn, 언마운트 시 close
+  // manager.spawn()이 내부에서 중복 방지(contains_key 체크)하므로 spawnedRef 불필요
   useEffect(() => {
-    if (spawnedRef.current) return;
-    spawnedRef.current = true;
-
     spawnTerminal(paneId, workspaceId).catch((err) => {
       writeln(`\r\n\x1b[31m[PTY spawn failed: ${err}]\x1b[0m`);
     });
-
     return () => {
       closePane(paneId).catch(() => {});
     };
