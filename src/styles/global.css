@@ -1,0 +1,135 @@
+/* ─── Design Tokens ─────────────────────────────────────────── */
+:root {
+  /* Background */
+  --bg-base:        #0e0e11;
+  --bg-surface:     #16161a;
+  --bg-elevated:    #1e1e24;
+  --bg-hover:       #26262e;
+  --bg-active:      #2e2e38;
+
+  /* Sidebar */
+  --sidebar-bg:     #111114;
+  --sidebar-border: #1f1f26;
+
+  /* Accent */
+  --accent:         #7c6af7;
+  --accent-dim:     #4a3fb5;
+  --accent-glow:    rgba(124, 106, 247, 0.25);
+
+  /* Text */
+  --text-primary:   #e8e8f0;
+  --text-secondary: #8888a0;
+  --text-dim:       #55556a;
+
+  /* Status colors */
+  --color-success:  #4ade80;
+  --color-warning:  #fbbf24;
+  --color-error:    #f87171;
+  --color-info:     #60a5fa;
+
+  /* Notification ring */
+  --ring-color:     #7c6af7;
+  --ring-urgent:    #f87171;
+
+  /* Border */
+  --border:         #1f1f26;
+  --border-focus:   #7c6af7;
+
+  /* Divider */
+  --divider-bg:         #1f1f26;
+  --divider-hover:      #7c6af7;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  /* Typography */
+  --font-ui:   -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  --font-size-xs:   11px;
+  --font-size-sm:   12px;
+  --font-size-base: 13px;
+  --font-size-lg:   15px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Transitions */
+  --transition-fast: 100ms ease;
+  --transition-base: 180ms ease;
+
+  /* Sidebar width (overridden by JS) */
+  --sidebar-width: 220px;
+
+  /* Z-index layers */
+  --z-base:          0;
+  --z-overlay:     100;
+  --z-modal:       200;
+  --z-toast:       300;
+}
+
+/* ─── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-active);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+}
+
+/* ─── Base Layout ────────────────────────────────────────────── */
+#root {
+  display: flex;
+  flex-direction: row;
+}
+
+/* ─── Utility classes ────────────────────────────────────────── */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
