@@ -44,7 +44,9 @@ impl PtyHandle {
     }
 
     pub fn write_bytes(&self, data: &[u8]) -> Result<()> {
-        self.writer.lock().unwrap().write_all(data)?;
+        let mut w = self.writer.lock().unwrap();
+        w.write_all(data)?;
+        w.flush()?;
         Ok(())
     }
 

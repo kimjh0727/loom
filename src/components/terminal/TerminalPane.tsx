@@ -35,9 +35,8 @@ export default function TerminalPane({
       //   Backspace → \x7f(DEL) 대신 \x08(BS): PTY stty erase 기본값 맞춤
       //   Enter     → \r 대신 \n: PTY icrnl(CR→LF) 미설정 환경 대응
       const normalized = data === "\x7f" ? "\x08" : data === "\r" ? "\n" : data;
-      writeToPane(paneId, normalized).catch(() => {
-        // Tauri 미연결(브라우저 개발 환경) → 로컬 에코
-        termRef.current?.write(normalized);
+      writeToPane(paneId, normalized).catch((err) => {
+        termRef.current?.write(`\x1b[31m[err:${err}]\x1b[0m`);
       });
     },
     // 컨테이너 리사이즈 → PTY 크기 동기화
@@ -51,8 +50,8 @@ export default function TerminalPane({
     if (spawnedRef.current) return;
     spawnedRef.current = true;
 
-    spawnTerminal(paneId, workspaceId).catch(() => {
-      // 브라우저 개발 환경에서는 무시
+    spawnTerminal(paneId, workspaceId).catch((err) => {
+      writeln(`\r\n\x1b[31m[PTY spawn failed: ${err}]\x1b[0m`);
     });
 
     return () => {
