@@ -427,6 +427,183 @@ PaneDivider mousedown
 
 ---
 
+---
+
+## cmux 원본 구현 참조
+
+> 원본 소스: `/root/sources/cmux-original/` (macOS Swift 앱)
+> 각 Phase 구현 시 이 섹션을 먼저 확인하고 설계 결정에 반영할 것
+
+---
+
+### IPC 프로토콜 (Phase 4 참조)
+
+**원본:** Unix domain socket → **Loom:** Windows Named Pipe (`\\.\pipe\loom`)
+
+**메시지 형식** (`TerminalController.swift:processV2Command`):
+```
+← 클라이언트: {"id": 1, "method": "surface.send_text", "params": {...}}\n
+→ 서버 응답:  {"id": 1, "ok": true, "result": {...}}\n
+← 오류 응답:  {"id": 1, "ok": false, "error": {"code": "not_found", "message": "..."}}\n
+```
+
+**지원 메서드 전체 목록** (cmux V2 기준, Loom에서 구현할 것 표시):
+
+| 메서드 | cmux 구현 위치 | Loom 구현 여부 |
+|---|---|---|
+| `system.ping` | `TerminalController.swift:2003` | Phase 4-B |
+| `workspace.list` | `TerminalController.swift:v2WorkspaceList` | Phase 4-C |
+| `workspace.create` | `TerminalController.swift:v2WorkspaceCreate` | Phase 4-C |
+| `workspace.select` | `TerminalController.swift:v2WorkspaceSelect` | Phase 4-C |
+| `workspace.current` | `TerminalController.swift:v2WorkspaceCurrent` | Phase 4-C |
+| `workspace.rename` | `TerminalController.swift:v2WorkspaceRename` | Phase 4-C |
+| `surface.list` | `TerminalController.swift:v2SurfaceList` | Phase 4-D (`pane.list`) |
+| `surface.focus` | `TerminalController.swift:v2SurfaceFocus` | Phase 4-D (`pane.focus`) |
+| `surface.split` | `TerminalController.swift:v2SurfaceSplit` | Phase 4-D (`pane.split`) |
+| `surface.send_text` | `TerminalController.swift:v2SurfaceSendText` | Phase 4-D (`pane.write`) |
+| `surface.close` | `TerminalController.swift:v2SurfaceClose` | Phase 4-D |
+| `notification.create` | `TerminalController.swift:v2NotificationCreate` | Phase 5-C (`notify`) |
+| `notification.list` | `TerminalController.swift:v2NotificationList` | Phase 5-C |
+| `notification.clear` | `TerminalController.swift:v2NotificationClear` | Phase 5-C |
+| `git.report_branch` | `TerminalController.swift` | Phase 4-C |
+| `status.set` | `TerminalController.swift` | Phase 4-C |
+
+**연결 처리 원칙** (`TerminalController.swift:handleClient`):
+- 1 연결 = 1 스레드/task (tokio spawn)
+- 줄 단위 읽기(`\n` 구분) → parseCommand → writeResponse
+- 인증 필요 시 첫 줄을 password로 처리 후 `"ok\n"` / `"error\n"` 응답
+- 소켓 타임아웃: read/write 각 8초
+
+**오류 코드 표준** (cmux 동일 코드 사용):
+- `"invalid_request"` — JSON 형식 오류, method 누락
+- `"method_not_found"` — 알 수 없는 메서드
+- `"not_found"` — workspace_id / pane_id 없음
+- `"invalid_params"` — 필수 파라미터 누락
+- `"internal_error"` — Rust 내부 오류
+
+---
+
+### 알림 시스템 (Phase 5 참조)
+
+**원본:** `TerminalNotificationStore.swift` (1392 lines)
+
+**Notification 구조체** (cmux 동일 필드 사용):
+```typescript
+// Loom TypeScript (src/types/notification.ts)
+interface Notification {
+  id: string;          // UUID
+  workspaceId: string; // tabId
+  paneId?: string;     // surfaceId (optional)
+  title: string;
+  body: string;        // cmux: subtitle + body 합침
+  source: "osc9" | "osc99" | "osc777" | "pipe";
+  isRead: boolean;
+  timestamp: number;   // Date.getTime()
+}
+```
+
+**인덱스 구조** (`TerminalNotificationStore.swift:NotificationIndexes`):
+- 알림 배열 변경 시마다 인덱스 재계산 (O(n) but 단순)
+- `unreadCountByTabId: Record<string, number>` — 워크스페이스별 미읽음 수
+- `latestUnreadByTabId` — 워크스페이스별 최신 미읽음 알림
+
+**알림 추가 로직** (`addNotification` 핵심 원칙):
+1. 동일 workspace+pane의 기존 알림 덮어쓰기 (중복 방지)
+2. 현재 포커스된 패널이면 `isRead: true`로 즉시 처리
+3. 새 알림은 배열 **맨 앞**에 삽입 (최신순)
+
+**배지 카운트**:
+- 99 초과 시 `"99+"` 문자열로 표시
+- 워크스페이스 탭 배지: `unreadCountByTabId[workspaceId]`
+
+**autosave 주기:** 원본 8초마다 자동저장 → Loom도 동일 적용 (Phase 6-C)
+
+---
+
+### OSC 이스케이프 파서 (Phase 5-B 참조)
+
+**원본:** `TerminalController.swift` + `GhosttyTerminalView.swift`
+
+**지원 시퀀스:**
+| OSC | 형식 | 용도 |
+|---|---|---|
+| OSC 7 | `\x1b]7;file://host/path\x07` | CWD 업데이트 (선택 구현) |
+| OSC 9 | `\x1b]9;message\x07` | 알림 (ConEmu 호환) |
+| OSC 99 | `\x1b]99;title=T;body=B\x07` | 알림 (제목+본문 분리) |
+| OSC 777 | `\x1b]777;notify;title;body\x07` | 알림 (VTE 호환) |
+
+**파서 구현 원칙** (`osc.rs` 구현 시):
+- PTY raw 바이트 스트림에서 `\x1b]` 감지 → BEL(`\x07`) 또는 ST(`\x1b\\`) 까지 수집
+- OSC 시퀀스는 **xterm.js에 전달하지 않고** 스트립 후 나머지만 forwarding
+- OSC 9/99/777만 파싱, 나머지는 그냥 pass-through
+
+**Rust 구현 패턴:**
+```rust
+// osc.rs: PTY 출력을 처리하면서 OSC를 추출
+pub fn strip_osc(data: &[u8]) -> (Vec<u8>, Vec<OscNotification>) {
+  // \x1b] ... \x07 구간 추출
+  // 나머지 바이트는 clean_output에 포함
+  // notifications Vec에 파싱 결과 추가
+}
+```
+
+---
+
+### 세션 퍼시스턴스 (Phase 6-C 참조)
+
+**원본:** `SessionPersistence.swift` (487 lines)
+
+**저장 경로:**
+- macOS: `~/Library/Application Support/cmux/session-{bundleId}.json`
+- **Loom (Windows):** `%APPDATA%\loom\session.json`
+
+**스냅샷 구조** (Loom 적용 버전):
+```typescript
+// 원본 AppSessionSnapshot → Loom SessionSnapshot
+interface SessionSnapshot {
+  version: 1;
+  createdAt: number;
+  workspaces: WorkspaceSnapshot[];
+  activeWorkspaceId: string | null;
+}
+
+interface WorkspaceSnapshot {
+  id: string;
+  name: string;
+  gitBranch?: string;
+  paneRoot: PaneNode;  // 전체 트리 직렬화 (ratio, id 포함)
+}
+```
+
+**저장 원칙** (원본 동일):
+- 변경 없으면 파일 쓰기 생략 (내용 비교 후 skip)
+- atomic write (임시 파일 → rename)
+- 자동저장 주기: **8초** (원본 `autosaveInterval = 8.0`)
+- JSON 키 정렬 (`sorted keys`) — diff 비교 용이
+
+**스크롤백 저장** (원본 구현, Loom 선택사항):
+- 원본: 최대 4000줄 / 400,000자 ANSI-safe 잘라내기
+- Loom Phase 6-C에서 구현 여부 결정
+
+---
+
+### 분할 레이아웃 (Phase 3 참조)
+
+**원본:** Bonsplit 프레임워크 사용 (macOS 전용) → **Loom:** 직접 구현
+
+**핵심 설계 결정 (이미 완료, 버그 수정 이력):**
+1. split 노드에 고유 `id` 필드 필수
+   - 이유: `firstLeafId`로 매칭하면 중첩 분할에서 상위 노드가 먼저 매칭되는 버그 발생
+   - 해결: `{ kind: "split", id: crypto.randomUUID(), ... }` — id로만 타겟 노드 식별
+2. flex-grow 비율 방식: `flex: ${ratio} 1 0` / `flex: ${1-ratio} 1 0`
+   - `flex-basis` 퍼센트(%) 방식은 column direction에서 신뢰 불가
+3. 드래그: 절대 좌표 방식 금지, **델타 기반** 필수
+   - `startPos + startRatio` 스냅샷 → `delta / containerSize` 더하기
+   - 이유: 절대 좌표는 divider 두께, padding 등으로 오프셋 발생
+4. ratio 범위: 0.1 ~ 0.9 클램핑 (최소 10% 확보)
+
+---
+
 ## Key Dependencies
 
 ### Rust (`Cargo.toml`)
