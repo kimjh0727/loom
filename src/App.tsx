@@ -6,18 +6,12 @@ import { useAppStore } from "./store";
 export default function App() {
   const createWorkspace = useAppStore((s) => s.createWorkspace);
   const workspaces = useAppStore((s) => s.workspaces);
-  const initPaneRoot = useAppStore((s) => s.initPaneRoot);
 
-  // 데모용 초기 워크스페이스
+  // 데모용 초기 워크스페이스 (앱 최초 실행 시)
   useEffect(() => {
     if (workspaces.length > 0) return;
-    const makeWs = (name: string) => {
-      const id = createWorkspace(name);
-      const paneId = crypto.randomUUID();
-      initPaneRoot(id, { kind: "leaf", paneId });
-    };
-    makeWs("agent-1");
-    makeWs("agent-2");
+    createWorkspace("agent-1");
+    createWorkspace("agent-2");
   }, []);
 
   return (

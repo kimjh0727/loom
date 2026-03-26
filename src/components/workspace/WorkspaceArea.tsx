@@ -29,7 +29,7 @@ export default function WorkspaceArea() {
     );
   }
 
-  const paneRoot = paneRoots[activeWorkspace.id] ?? activeWorkspace.paneRoot;
+  const paneRoot = paneRoots[activeWorkspace.id];
 
   return (
     <div
@@ -80,7 +80,10 @@ export default function WorkspaceArea() {
 
       {/* Pane area */}
       <div style={{ flex: 1, overflow: "hidden", padding: 4 }}>
-        <SplitPane node={paneRoot} workspaceId={activeWorkspace.id} />
+        {paneRoot
+          ? <SplitPane node={paneRoot} workspaceId={activeWorkspace.id} />
+          : <div style={{ color: "var(--text-dim)", margin: "auto", fontSize: "var(--font-size-sm)" }}>loading...</div>
+        }
       </div>
     </div>
   );
