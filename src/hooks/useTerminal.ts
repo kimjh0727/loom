@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from "react";
-import { Terminal } from "@xterm/xterm";
+import { Terminal, IDisposable } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
@@ -14,8 +14,13 @@ export function useTerminal(
 ) {
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  // stale closure 방지: 최신 onData를 ref로 유지
+  const onDataRef = useRef(options.onData);
+  useEffect(() => {
+    onDataRef.current = options.onData;
+  });
 
-  // 터미널 초기화
+  // 터미널 초기화 (마운트 1회)
   useEffect(() => {
     if (!containerRef.current || termRef.current) return;
 
@@ -53,18 +58,17 @@ export function useTerminal(
     });
 
     const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon();
-
     term.loadAddon(fitAddon);
-    term.loadAddon(webLinksAddon);
+    term.loadAddon(new WebLinksAddon());
     term.open(containerRef.current);
     fitAddon.fit();
 
-    // PTY 연결 전 로컬 에코 (Phase 2-E에서 PTY로 교체)
-    term.onData((data) => {
-      if (options.onData) {
-        options.onData(data);
+    // onData: ref를 통해 항상 최신 콜백 호출 → stale closure 없음
+    const disposable: IDisposable = term.onData((data) => {
+      if (onDataRef.current) {
+        onDataRef.current(data);
       } else {
+        // PTY 미연결 시 로컬 에코
         term.write(data);
       }
     });
@@ -76,19 +80,21 @@ export function useTerminal(
     fitAddonRef.current = fitAddon;
 
     return () => {
+      disposable.dispose();
       term.dispose();
       termRef.current = null;
       fitAddonRef.current = null;
     };
   }, []);
 
-  // 리사이즈 옵저버
+  // 컨테이너 리사이즈 감지 → fit()
   useEffect(() => {
-    if (!containerRef.current) return;
+    const el = containerRef.current;
+    if (!el) return;
     const observer = new ResizeObserver(() => {
       fitAddonRef.current?.fit();
     });
-    observer.observe(containerRef.current);
+    observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
@@ -101,9 +107,8 @@ export function useTerminal(
   }, []);
 
   const getDimensions = useCallback(() => {
-    const term = termRef.current;
-    if (!term) return { cols: 80, rows: 24 };
-    return { cols: term.cols, rows: term.rows };
+    const t = termRef.current;
+    return t ? { cols: t.cols, rows: t.rows } : { cols: 80, rows: 24 };
   }, []);
 
   return { write, writeln, getDimensions, termRef, fitAddonRef };

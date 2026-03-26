@@ -26,39 +26,49 @@ export default function TerminalPane({
   const containerRef = useRef<HTMLDivElement>(null);
   const spawnedRef = useRef(false);
 
-  const { write, termRef } = useTerminal(containerRef, {
-    // Phase 2-E에서 PTY로 연결: 키입력 → write_to_pane
+  const { write, writeln, termRef } = useTerminal(containerRef, {
+    // xterm.js 키입력 → PTY stdin
     onData: (data) => {
       writeToPane(paneId, data).catch(() => {
-        // PTY 미연결 시 로컬 에코
+        // Tauri 미연결(브라우저 개발 환경) → 로컬 에코
         termRef.current?.write(data);
       });
     },
   });
 
-  // PTY spawn (Tauri 환경에서만)
+  // PTY spawn (Tauri 환경에서만 동작)
   useEffect(() => {
     if (spawnedRef.current) return;
     spawnedRef.current = true;
 
-    spawnTerminal(paneId, workspaceId).catch((err) => {
-      // 브라우저 개발 환경(non-Tauri)에서는 무시
-      console.debug("spawn_terminal not available:", err);
+    spawnTerminal(paneId, workspaceId).catch(() => {
+      // 브라우저 개발 환경에서는 무시
     });
+
+    return () => {
+      // 언마운트 시 PTY 정리는 Phase 3-D에서 close_pane_pty 호출
+    };
   }, [paneId, workspaceId]);
 
-  // PTY 출력 수신 → xterm.js write
+  // PTY stdout → xterm.js
   useEffect(() => {
     const unlisten = listen<PtyDataPayload>(EVENTS.PTY_DATA, (event) => {
       if (event.payload.pane_id === paneId) {
         write(event.payload.data);
       }
     });
-
-    return () => {
-      unlisten.then((u) => u());
-    };
+    return () => { unlisten.then((u) => u()); };
   }, [paneId, write]);
+
+  // PTY 프로세스 종료 감지
+  useEffect(() => {
+    const unlisten = listen<string>(EVENTS.PANE_CLOSED, (event) => {
+      if (event.payload === paneId) {
+        writeln("\r\n\x1b[2m[process exited]\x1b[0m");
+      }
+    });
+    return () => { unlisten.then((u) => u()); };
+  }, [paneId, writeln]);
 
   return (
     <div className={styles.container}>
