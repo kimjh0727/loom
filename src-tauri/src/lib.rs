@@ -5,7 +5,7 @@ mod commands;
 mod notification;
 
 use workspace::state::AppState;
-use commands::{workspace_cmds, notification_cmds};
+use commands::{workspace_cmds, notification_cmds, terminal_cmds};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -13,10 +13,17 @@ pub fn run() {
         .manage(AppState::new())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            // workspace
             workspace_cmds::list_workspaces,
             workspace_cmds::create_workspace,
             workspace_cmds::select_workspace,
             workspace_cmds::remove_workspace,
+            // terminal
+            terminal_cmds::spawn_terminal,
+            terminal_cmds::write_to_pane,
+            terminal_cmds::resize_pane,
+            terminal_cmds::close_pane_pty,
+            // notifications
             notification_cmds::list_notifications,
             notification_cmds::clear_notifications,
             notification_cmds::mark_notification_read,
