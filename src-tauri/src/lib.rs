@@ -12,6 +12,14 @@ pub fn run() {
     tauri::Builder::default()
         .manage(AppState::new())
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            // Named Pipe IPC 서버 시작
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                ipc::pipe_server::run(handle).await;
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // workspace
             workspace_cmds::list_workspaces,
