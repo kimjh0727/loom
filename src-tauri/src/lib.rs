@@ -5,7 +5,7 @@ mod commands;
 mod notification;
 
 use workspace::state::AppState;
-use commands::{workspace_cmds, notification_cmds, terminal_cmds};
+use commands::{workspace_cmds, notification_cmds, terminal_cmds, pane_cmds};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -23,6 +23,9 @@ pub fn run() {
             terminal_cmds::write_to_pane,
             terminal_cmds::resize_pane,
             terminal_cmds::close_pane_pty,
+            // pane
+            pane_cmds::spawn_split_pane,
+            pane_cmds::close_pane,
             // notifications
             notification_cmds::list_notifications,
             notification_cmds::clear_notifications,

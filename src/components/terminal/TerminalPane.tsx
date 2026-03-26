@@ -1,7 +1,7 @@
 import { useRef, useEffect } from "react";
 import { useTerminal } from "../../hooks/useTerminal";
 import TerminalToolbar from "./TerminalToolbar";
-import { spawnTerminal, writeToPane, resizePane } from "../../ipc/commands";
+import { spawnTerminal, writeToPane, resizePane, closePane } from "../../ipc/commands";
 import { listen } from "@tauri-apps/api/event";
 import { EVENTS, PtyDataPayload } from "../../ipc/events";
 import styles from "../../styles/terminal.module.css";
@@ -50,7 +50,7 @@ export default function TerminalPane({
     });
 
     return () => {
-      // 언마운트 시 PTY 정리는 Phase 3-D에서 close_pane_pty 호출
+      closePane(paneId).catch(() => {});
     };
   }, [paneId, workspaceId]);
 

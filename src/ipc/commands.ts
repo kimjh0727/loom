@@ -15,6 +15,15 @@ export const resizePane = (paneId: string, cols: number, rows: number) =>
 export const closePanePty = (paneId: string) =>
   invoke("close_pane_pty", { paneId });
 
+export const spawnSplitPane = (
+  paneId: string,
+  workspaceId: string,
+  cwd?: string
+) => invoke("spawn_split_pane", { paneId, workspaceId, cwd });
+
+export const closePane = (paneId: string) =>
+  invoke("close_pane", { paneId });
+
 export const listWorkspaces = () => invoke("list_workspaces");
 
 export const createWorkspace = (name: string, cwd?: string) =>
