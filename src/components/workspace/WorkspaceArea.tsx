@@ -1,5 +1,44 @@
 import SplitPane from "./SplitPane";
+import PaneWrapper from "./PaneWrapper";
 import { useAppStore } from "../../store";
+import { PaneRectProvider, usePaneRectContext } from "../../context/PaneRectContext";
+import { PaneNode } from "../../types/workspace";
+
+function getAllLeafIds(node: PaneNode): string[] {
+  if (node.kind === "leaf") return [node.paneId];
+  return [...getAllLeafIds(node.first), ...getAllLeafIds(node.second)];
+}
+
+/** 터미널을 flat layer에 고정 마운트 — split 구조 변경 시 unmount 방지 */
+function TerminalLayer({ workspaceId, paneRoot }: { workspaceId: string; paneRoot: PaneNode }) {
+  const { containerRef, rects } = usePaneRectContext();
+  const leafIds = getAllLeafIds(paneRoot);
+
+  return (
+    <div ref={containerRef} style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+      {leafIds.map((paneId) => {
+        const rect = rects[paneId];
+        if (!rect || rect.width === 0 || rect.height === 0) return null;
+        return (
+          <div
+            key={paneId}
+            style={{
+              position: "absolute",
+              top: rect.top,
+              left: rect.left,
+              width: rect.width,
+              height: rect.height,
+              overflow: "hidden",
+              pointerEvents: "auto",
+            }}
+          >
+            <PaneWrapper paneId={paneId} workspaceId={workspaceId} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function WorkspaceArea() {
   const workspaces = useAppStore((s) => s.workspaces);
@@ -54,13 +93,7 @@ export default function WorkspaceArea() {
           background: "var(--bg-surface)",
         }}
       >
-        <span
-          style={{
-            fontSize: "var(--font-size-sm)",
-            color: "var(--text-secondary)",
-            fontWeight: 500,
-          }}
-        >
+        <span style={{ fontSize: "var(--font-size-sm)", color: "var(--text-secondary)", fontWeight: 500 }}>
           {activeWorkspace.name}
         </span>
         {activeWorkspace.gitBranch && (
@@ -78,12 +111,22 @@ export default function WorkspaceArea() {
         )}
       </div>
 
-      {/* Pane area */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: 4, minHeight: 0 }}>
-        {paneRoot
-          ? <SplitPane node={paneRoot} workspaceId={activeWorkspace.id} />
-          : <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-dim)", fontSize: "var(--font-size-sm)" }}>loading...</div>
-        }
+      {/* Pane area: SplitPane(placeholder) + TerminalLayer(flat) */}
+      <div style={{ flex: 1, position: "relative", overflow: "hidden", padding: 4, minHeight: 0 }}>
+        {paneRoot ? (
+          <PaneRectProvider>
+            {/* Layout layer: invisible placeholders that define size/position */}
+            <div style={{ position: "absolute", inset: 4, display: "flex" }}>
+              <SplitPane node={paneRoot} workspaceId={activeWorkspace.id} />
+            </div>
+            {/* Terminal layer: always mounted, never unmounts on split */}
+            <TerminalLayer workspaceId={activeWorkspace.id} paneRoot={paneRoot} />
+          </PaneRectProvider>
+        ) : (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-dim)", fontSize: "var(--font-size-sm)" }}>
+            loading...
+          </div>
+        )}
       </div>
     </div>
   );

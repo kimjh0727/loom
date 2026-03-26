@@ -1,8 +1,8 @@
 import { useRef, useCallback } from "react";
-import PaneWrapper from "./PaneWrapper";
 import PaneDivider from "./PaneDivider";
 import { PaneNode } from "../../types/workspace";
 import { useAppStore } from "../../store";
+import { usePaneRectContext } from "../../context/PaneRectContext";
 
 interface Props {
   node: PaneNode;
@@ -21,11 +21,16 @@ export default function SplitPane({ node, workspaceId }: Props) {
     [node, workspaceId, setSplitRatio]
   );
 
+  const { registerPlaceholder } = usePaneRectContext();
+
   if (node.kind === "leaf") {
+    // 실제 터미널은 WorkspaceArea의 flat layer에 마운트됨.
+    // 여기서는 크기/위치만 정의하는 invisible placeholder.
     return (
-      <div style={{ display: "flex", flex: 1, overflow: "hidden", minWidth: 0, minHeight: 0 }}>
-        <PaneWrapper paneId={node.paneId} workspaceId={workspaceId} />
-      </div>
+      <div
+        ref={(el) => registerPlaceholder(node.paneId, el)}
+        style={{ flex: 1, minWidth: 0, minHeight: 0 }}
+      />
     );
   }
 
