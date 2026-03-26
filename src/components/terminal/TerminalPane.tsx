@@ -1,7 +1,7 @@
 import { useRef, useEffect } from "react";
 import { useTerminal } from "../../hooks/useTerminal";
 import TerminalToolbar from "./TerminalToolbar";
-import { spawnTerminal, writeToPane } from "../../ipc/commands";
+import { spawnTerminal, writeToPane, resizePane } from "../../ipc/commands";
 import { listen } from "@tauri-apps/api/event";
 import { EVENTS, PtyDataPayload } from "../../ipc/events";
 import styles from "../../styles/terminal.module.css";
@@ -33,6 +33,10 @@ export default function TerminalPane({
         // Tauri 미연결(브라우저 개발 환경) → 로컬 에코
         termRef.current?.write(data);
       });
+    },
+    // 컨테이너 리사이즈 → PTY 크기 동기화
+    onResize: (cols, rows) => {
+      resizePane(paneId, cols, rows).catch(() => {});
     },
   });
 

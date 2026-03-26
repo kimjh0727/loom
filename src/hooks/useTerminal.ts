@@ -6,6 +6,7 @@ import "@xterm/xterm/css/xterm.css";
 
 interface UseTerminalOptions {
   onData?: (data: string) => void;
+  onResize?: (cols: number, rows: number) => void;
 }
 
 export function useTerminal(
@@ -14,10 +15,12 @@ export function useTerminal(
 ) {
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  // stale closure 방지: 최신 onData를 ref로 유지
+  // stale closure 방지: 최신 콜백을 ref로 유지
   const onDataRef = useRef(options.onData);
+  const onResizeRef = useRef(options.onResize);
   useEffect(() => {
     onDataRef.current = options.onData;
+    onResizeRef.current = options.onResize;
   });
 
   // 터미널 초기화 (마운트 1회)
@@ -87,12 +90,16 @@ export function useTerminal(
     };
   }, []);
 
-  // 컨테이너 리사이즈 감지 → fit()
+  // 컨테이너 리사이즈 감지 → fit() → resize_pane 콜백
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const observer = new ResizeObserver(() => {
-      fitAddonRef.current?.fit();
+      const addon = fitAddonRef.current;
+      const term = termRef.current;
+      if (!addon || !term) return;
+      addon.fit();
+      onResizeRef.current?.(term.cols, term.rows);
     });
     observer.observe(el);
     return () => observer.disconnect();
