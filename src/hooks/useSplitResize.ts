@@ -3,18 +3,22 @@ import { useCallback, useRef, useEffect } from "react";
 interface UseSplitResizeOptions {
   direction: "horizontal" | "vertical";
   containerRef: React.RefObject<HTMLElement | null>;
+  currentRatio: number;
   onRatioChange: (ratio: number) => void;
 }
 
 export function useSplitResize({
   direction,
   containerRef,
+  currentRatio,
   onRatioChange,
 }: UseSplitResizeOptions) {
-  // stale closure 방지: 최신 콜백을 ref로 유지
   const onRatioChangeRef = useRef(onRatioChange);
+  const currentRatioRef = useRef(currentRatio);
+
   useEffect(() => {
     onRatioChangeRef.current = onRatioChange;
+    currentRatioRef.current = currentRatio;
   });
 
   const onMouseDown = useCallback(
@@ -26,16 +30,19 @@ export function useSplitResize({
       if (!container) return;
 
       const rect = container.getBoundingClientRect();
+      const isHorizontal = direction === "horizontal";
+
+      // 드래그 시작 시점의 마우스 위치와 비율 스냅샷
+      const startPos = isHorizontal ? e.clientX : e.clientY;
+      const containerSize = isHorizontal ? rect.width : rect.height;
+      const startRatio = currentRatioRef.current;
 
       const onMouseMove = (ev: MouseEvent) => {
-        let ratio: number;
-        if (direction === "horizontal") {
-          ratio = (ev.clientX - rect.left) / rect.width;
-        } else {
-          ratio = (ev.clientY - rect.top) / rect.height;
-        }
-        ratio = Math.min(0.9, Math.max(0.1, ratio));
-        onRatioChangeRef.current(ratio);
+        const currentPos = isHorizontal ? ev.clientX : ev.clientY;
+        const delta = currentPos - startPos;
+        const deltaRatio = delta / containerSize;
+        const newRatio = Math.min(0.9, Math.max(0.1, startRatio + deltaRatio));
+        onRatioChangeRef.current(newRatio);
       };
 
       const onMouseUp = () => {
@@ -45,7 +52,7 @@ export function useSplitResize({
         document.body.style.userSelect = "";
       };
 
-      document.body.style.cursor = direction === "horizontal" ? "col-resize" : "row-resize";
+      document.body.style.cursor = isHorizontal ? "col-resize" : "row-resize";
       document.body.style.userSelect = "none";
       document.addEventListener("mousemove", onMouseMove);
       document.addEventListener("mouseup", onMouseUp);

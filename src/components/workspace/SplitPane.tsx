@@ -62,6 +62,7 @@ export default function SplitPane({ node, workspaceId }: Props) {
       <PaneDivider
         direction={node.direction}
         containerRef={containerRef}
+        currentRatio={node.ratio}
         onRatioChange={handleRatioChange}
       />
 

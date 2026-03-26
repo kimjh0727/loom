@@ -4,15 +4,16 @@ import { useSplitResize } from "../../hooks/useSplitResize";
 interface Props {
   direction: "horizontal" | "vertical";
   containerRef: React.RefObject<HTMLElement | null>;
+  currentRatio: number;
   onRatioChange: (ratio: number) => void;
 }
 
-export default function PaneDivider({ direction, containerRef, onRatioChange }: Props) {
+export default function PaneDivider({ direction, containerRef, currentRatio, onRatioChange }: Props) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const isHorizontal = direction === "horizontal";
 
-  const { onMouseDown } = useSplitResize({ direction, containerRef, onRatioChange });
+  const { onMouseDown } = useSplitResize({ direction, containerRef, currentRatio, onRatioChange });
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
