@@ -29,9 +29,12 @@ export default function TerminalPane({
   const { write, writeln, termRef } = useTerminal(containerRef, {
     // xterm.js 키입력 → PTY stdin
     onData: (data) => {
-      writeToPane(paneId, data).catch(() => {
+      // xterm.js는 Backspace를 \x7f(DEL)로 전송하지만
+      // PTY stty erase 기본값은 \x08(BS)이므로 정규화
+      const normalized = data === "\x7f" ? "\x08" : data;
+      writeToPane(paneId, normalized).catch(() => {
         // Tauri 미연결(브라우저 개발 환경) → 로컬 에코
-        termRef.current?.write(data);
+        termRef.current?.write(normalized);
       });
     },
     // 컨테이너 리사이즈 → PTY 크기 동기화
