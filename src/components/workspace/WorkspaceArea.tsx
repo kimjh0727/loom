@@ -79,10 +79,10 @@ export default function WorkspaceArea() {
       </div>
 
       {/* Pane area */}
-      <div style={{ flex: 1, overflow: "hidden", padding: 4 }}>
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: 4, minHeight: 0 }}>
         {paneRoot
           ? <SplitPane node={paneRoot} workspaceId={activeWorkspace.id} />
-          : <div style={{ color: "var(--text-dim)", margin: "auto", fontSize: "var(--font-size-sm)" }}>loading...</div>
+          : <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-dim)", fontSize: "var(--font-size-sm)" }}>loading...</div>
         }
       </div>
     </div>

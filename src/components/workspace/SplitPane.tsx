@@ -8,30 +8,35 @@ interface Props {
 
 export default function SplitPane({ node, workspaceId }: Props) {
   if (node.kind === "leaf") {
-    return <PaneWrapper paneId={node.paneId} workspaceId={workspaceId} />;
+    return (
+      <div style={{ display: "flex", flex: 1, overflow: "hidden", minWidth: 0, minHeight: 0 }}>
+        <PaneWrapper paneId={node.paneId} workspaceId={workspaceId} />
+      </div>
+    );
   }
 
   const isHorizontal = node.direction === "horizontal";
-  const firstSize = `${node.ratio * 100}%`;
-  const secondSize = `${(1 - node.ratio) * 100}%`;
+  const firstBasis = `${node.ratio * 100}%`;
 
   return (
     <div
       style={{
         display: "flex",
         flexDirection: isHorizontal ? "row" : "column",
-        width: "100%",
-        height: "100%",
-        gap: 0,
+        flex: 1,
         overflow: "hidden",
+        minWidth: 0,
+        minHeight: 0,
       }}
     >
+      {/* 첫 번째 자식: ratio만큼 */}
       <div
         style={{
-          [isHorizontal ? "width" : "height"]: firstSize,
-          overflow: "hidden",
+          flex: `0 0 ${firstBasis}`,
           display: "flex",
-          flexShrink: 0,
+          overflow: "hidden",
+          minWidth: 0,
+          minHeight: 0,
         }}
       >
         <SplitPane node={node.first} workspaceId={workspaceId} />
@@ -39,6 +44,8 @@ export default function SplitPane({ node, workspaceId }: Props) {
 
       {/* 디바이더 (Phase 3-C에서 드래그 기능 추가) */}
       <div
+        data-divider
+        data-direction={node.direction}
         style={{
           flexShrink: 0,
           background: "var(--divider-bg)",
@@ -48,21 +55,21 @@ export default function SplitPane({ node, workspaceId }: Props) {
           zIndex: 1,
         }}
         onMouseEnter={(e) =>
-          ((e.currentTarget as HTMLDivElement).style.background =
-            "var(--divider-hover)")
+          ((e.currentTarget as HTMLDivElement).style.background = "var(--divider-hover)")
         }
         onMouseLeave={(e) =>
-          ((e.currentTarget as HTMLDivElement).style.background =
-            "var(--divider-bg)")
+          ((e.currentTarget as HTMLDivElement).style.background = "var(--divider-bg)")
         }
       />
 
+      {/* 두 번째 자식: 나머지 공간 */}
       <div
         style={{
-          [isHorizontal ? "width" : "height"]: secondSize,
-          overflow: "hidden",
+          flex: 1,
           display: "flex",
-          flexShrink: 0,
+          overflow: "hidden",
+          minWidth: 0,
+          minHeight: 0,
         }}
       >
         <SplitPane node={node.second} workspaceId={workspaceId} />

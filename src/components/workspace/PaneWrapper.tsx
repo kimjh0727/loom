@@ -21,6 +21,8 @@ export default function PaneWrapper({ paneId, workspaceId }: Props) {
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
+        minWidth: 0,
+        minHeight: 0,
         borderRadius: "var(--radius-sm)",
         border: isFocused
           ? "1px solid var(--border-focus)"
