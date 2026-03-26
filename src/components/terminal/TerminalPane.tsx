@@ -27,6 +27,8 @@ export default function TerminalPane({
   const spawnedRef = useRef(false);
 
   const { write, writeln, termRef } = useTerminal(containerRef, {
+    onSplitRight,
+    onSplitDown,
     // xterm.js 키입력 → PTY stdin
     onData: (data) => {
       // xterm.js 키 정규화:

@@ -7,6 +7,8 @@ import "@xterm/xterm/css/xterm.css";
 interface UseTerminalOptions {
   onData?: (data: string) => void;
   onResize?: (cols: number, rows: number) => void;
+  onSplitRight?: () => void;
+  onSplitDown?: () => void;
 }
 
 export function useTerminal(
@@ -18,9 +20,13 @@ export function useTerminal(
   // stale closure 방지: 최신 콜백을 ref로 유지
   const onDataRef = useRef(options.onData);
   const onResizeRef = useRef(options.onResize);
+  const onSplitRightRef = useRef(options.onSplitRight);
+  const onSplitDownRef = useRef(options.onSplitDown);
   useEffect(() => {
     onDataRef.current = options.onData;
     onResizeRef.current = options.onResize;
+    onSplitRightRef.current = options.onSplitRight;
+    onSplitDownRef.current = options.onSplitDown;
   });
 
   // 터미널 초기화 (마운트 1회)
@@ -66,6 +72,18 @@ export function useTerminal(
     term.loadAddon(new WebLinksAddon());
     term.open(containerRef.current);
     fitAddon.fit();
+
+    // xterm.js 내부에서 단축키 가로채기 (window keydown은 터미널 포커스 시 전파 안 됨)
+    term.attachCustomKeyEventHandler((e) => {
+      if (e.type !== "keydown" || !e.ctrlKey || e.key !== "d") return true;
+      e.preventDefault();
+      if (e.shiftKey) {
+        onSplitDownRef.current?.();
+      } else {
+        onSplitRightRef.current?.();
+      }
+      return false; // xterm.js가 이 키를 PTY로 보내지 않도록 차단
+    });
 
     // onData: ref를 통해 항상 최신 콜백 호출 → stale closure 없음
     const disposable: IDisposable = term.onData((data) => {
