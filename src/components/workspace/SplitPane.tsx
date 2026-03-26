@@ -1,2 +1,57 @@
-// Phase 1-E에서 구현
-export {};
+import PaneWrapper from "./PaneWrapper";
+import { PaneNode } from "../../types/workspace";
+
+interface Props {
+  node: PaneNode;
+  workspaceId: string;
+}
+
+export default function SplitPane({ node, workspaceId }: Props) {
+  if (node.kind === "leaf") {
+    return <PaneWrapper paneId={node.paneId} />;
+  }
+
+  const isHorizontal = node.direction === "horizontal";
+  const firstSize = `${node.ratio * 100}%`;
+  const secondSize = `${(1 - node.ratio) * 100}%`;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: isHorizontal ? "row" : "column",
+        width: "100%",
+        height: "100%",
+        gap: 2,
+        overflow: "hidden",
+      }}
+    >
+      <div style={{ [isHorizontal ? "width" : "height"]: firstSize, overflow: "hidden", display: "flex" }}>
+        <SplitPane node={node.first} workspaceId={workspaceId} />
+      </div>
+
+      {/* Divider (Phase 3-C에서 드래그 기능 추가) */}
+      <div
+        style={{
+          flexShrink: 0,
+          background: "var(--divider-bg)",
+          [isHorizontal ? "width" : "height"]: 2,
+          cursor: isHorizontal ? "col-resize" : "row-resize",
+          transition: "background var(--transition-fast)",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLDivElement).style.background =
+            "var(--divider-hover)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLDivElement).style.background =
+            "var(--divider-bg)";
+        }}
+      />
+
+      <div style={{ [isHorizontal ? "width" : "height"]: secondSize, overflow: "hidden", display: "flex" }}>
+        <SplitPane node={node.second} workspaceId={workspaceId} />
+      </div>
+    </div>
+  );
+}
