@@ -6,6 +6,8 @@ use std::sync::{Arc, Mutex};
 pub struct PtyHandle {
     pub writer: Arc<Mutex<Box<dyn Write + Send>>>,
     master: Box<dyn portable_pty::MasterPty + Send>,
+    // child를 여기에 보관하지 않으면 spawn() 리턴 시 drop → bash SIGKILL
+    _child: Box<dyn portable_pty::Child + Send + Sync>,
 }
 
 impl PtyHandle {
@@ -34,11 +36,11 @@ impl PtyHandle {
             cmd.env(key, val);
         }
 
-        let _child = pair.slave.spawn_command(cmd)?;
+        let child = pair.slave.spawn_command(cmd)?;
         let reader = pair.master.try_clone_reader()?;
         let writer = Arc::new(Mutex::new(pair.master.take_writer()?));
 
-        Ok((PtyHandle { writer, master: pair.master }, reader))
+        Ok((PtyHandle { writer, master: pair.master, _child: child }, reader))
     }
 
     pub fn write_bytes(&self, data: &[u8]) -> Result<()> {
