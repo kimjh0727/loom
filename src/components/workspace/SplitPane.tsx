@@ -1,5 +1,9 @@
+import { useRef, useCallback } from "react";
 import PaneWrapper from "./PaneWrapper";
+import PaneDivider from "./PaneDivider";
 import { PaneNode } from "../../types/workspace";
+import { useAppStore } from "../../store";
+import { getFirstLeafId } from "../../store/paneSlice";
 
 interface Props {
   node: PaneNode;
@@ -7,6 +11,18 @@ interface Props {
 }
 
 export default function SplitPane({ node, workspaceId }: Props) {
+  const setSplitRatio = useAppStore((s) => s.setSplitRatio);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleRatioChange = useCallback(
+    (ratio: number) => {
+      if (node.kind !== "split") return;
+      const firstLeafId = getFirstLeafId(node.first);
+      if (firstLeafId) setSplitRatio(workspaceId, firstLeafId, ratio);
+    },
+    [node, workspaceId, setSplitRatio]
+  );
+
   if (node.kind === "leaf") {
     return (
       <div style={{ display: "flex", flex: 1, overflow: "hidden", minWidth: 0, minHeight: 0 }}>
@@ -16,10 +32,10 @@ export default function SplitPane({ node, workspaceId }: Props) {
   }
 
   const isHorizontal = node.direction === "horizontal";
-  const firstBasis = `${node.ratio * 100}%`;
 
   return (
     <div
+      ref={containerRef}
       style={{
         display: "flex",
         flexDirection: isHorizontal ? "row" : "column",
@@ -29,10 +45,10 @@ export default function SplitPane({ node, workspaceId }: Props) {
         minHeight: 0,
       }}
     >
-      {/* 첫 번째 자식: ratio만큼 */}
+      {/* 첫 번째 자식 */}
       <div
         style={{
-          flex: `0 0 ${firstBasis}`,
+          flex: `0 0 ${node.ratio * 100}%`,
           display: "flex",
           overflow: "hidden",
           minWidth: 0,
@@ -42,27 +58,14 @@ export default function SplitPane({ node, workspaceId }: Props) {
         <SplitPane node={node.first} workspaceId={workspaceId} />
       </div>
 
-      {/* 디바이더 (Phase 3-C에서 드래그 기능 추가) */}
-      <div
-        data-divider
-        data-direction={node.direction}
-        style={{
-          flexShrink: 0,
-          background: "var(--divider-bg)",
-          [isHorizontal ? "width" : "height"]: 3,
-          cursor: isHorizontal ? "col-resize" : "row-resize",
-          transition: "background var(--transition-fast)",
-          zIndex: 1,
-        }}
-        onMouseEnter={(e) =>
-          ((e.currentTarget as HTMLDivElement).style.background = "var(--divider-hover)")
-        }
-        onMouseLeave={(e) =>
-          ((e.currentTarget as HTMLDivElement).style.background = "var(--divider-bg)")
-        }
+      {/* 드래그 가능한 디바이더 */}
+      <PaneDivider
+        direction={node.direction}
+        containerRef={containerRef}
+        onRatioChange={handleRatioChange}
       />
 
-      {/* 두 번째 자식: 나머지 공간 */}
+      {/* 두 번째 자식 */}
       <div
         style={{
           flex: 1,
