@@ -45,10 +45,10 @@ export default function SplitPane({ node, workspaceId }: Props) {
         minHeight: 0,
       }}
     >
-      {/* 첫 번째 자식 */}
+      {/* 첫 번째 자식: flex-grow를 ratio로, 두번째는 1-ratio로 설정 */}
       <div
         style={{
-          flex: `0 0 ${node.ratio * 100}%`,
+          flex: `${node.ratio} 1 0`,
           display: "flex",
           overflow: "hidden",
           minWidth: 0,
@@ -68,7 +68,7 @@ export default function SplitPane({ node, workspaceId }: Props) {
       {/* 두 번째 자식 */}
       <div
         style={{
-          flex: 1,
+          flex: `${1 - node.ratio} 1 0`,
           display: "flex",
           overflow: "hidden",
           minWidth: 0,

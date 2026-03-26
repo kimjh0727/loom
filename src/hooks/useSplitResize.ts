@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 
 interface UseSplitResizeOptions {
   direction: "horizontal" | "vertical";
@@ -11,12 +11,16 @@ export function useSplitResize({
   containerRef,
   onRatioChange,
 }: UseSplitResizeOptions) {
-  const draggingRef = useRef(false);
+  // stale closure 방지: 최신 콜백을 ref로 유지
+  const onRatioChangeRef = useRef(onRatioChange);
+  useEffect(() => {
+    onRatioChangeRef.current = onRatioChange;
+  });
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      draggingRef.current = true;
+      e.stopPropagation();
 
       const container = containerRef.current;
       if (!container) return;
@@ -24,36 +28,29 @@ export function useSplitResize({
       const rect = container.getBoundingClientRect();
 
       const onMouseMove = (ev: MouseEvent) => {
-        if (!draggingRef.current) return;
-
         let ratio: number;
         if (direction === "horizontal") {
           ratio = (ev.clientX - rect.left) / rect.width;
         } else {
           ratio = (ev.clientY - rect.top) / rect.height;
         }
-
-        // 0.1 ~ 0.9 클램핑
         ratio = Math.min(0.9, Math.max(0.1, ratio));
-        onRatioChange(ratio);
+        onRatioChangeRef.current(ratio);
       };
 
       const onMouseUp = () => {
-        draggingRef.current = false;
         document.removeEventListener("mousemove", onMouseMove);
         document.removeEventListener("mouseup", onMouseUp);
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
       };
 
-      // 드래그 중 텍스트 선택/커서 방지
       document.body.style.cursor = direction === "horizontal" ? "col-resize" : "row-resize";
       document.body.style.userSelect = "none";
-
       document.addEventListener("mousemove", onMouseMove);
       document.addEventListener("mouseup", onMouseUp);
     },
-    [direction, containerRef, onRatioChange]
+    [direction, containerRef]
   );
 
   return { onMouseDown };
