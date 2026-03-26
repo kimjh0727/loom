@@ -6,6 +6,7 @@ function splitNode(root: PaneNode, targetPaneId: string, direction: SplitDirecti
     if (root.paneId !== targetPaneId) return root;
     return {
       kind: "split",
+      id: crypto.randomUUID(),
       direction,
       ratio: 0.5,
       first: { kind: "leaf", paneId: root.paneId },
@@ -34,19 +35,16 @@ export function getFirstLeafId(node: PaneNode): string | null {
   return getFirstLeafId(node.first);
 }
 
-/**
- * split 노드를 "first 서브트리의 첫 번째 leaf ID"로 식별하여 ratio 업데이트.
- * 중첩 분할에서도 정확히 해당 divider의 split 노드를 찾을 수 있음.
- */
-function setRatio(root: PaneNode, firstLeafId: string, ratio: number): PaneNode {
+/** split 노드를 고유 id로 찾아 ratio 업데이트. 중첩 분할에서도 정확히 해당 split 노드를 타겟팅. */
+function setRatio(root: PaneNode, splitId: string, ratio: number): PaneNode {
   if (root.kind === "leaf") return root;
-  if (getFirstLeafId(root.first) === firstLeafId) {
+  if (root.id === splitId) {
     return { ...root, ratio: Math.min(0.9, Math.max(0.1, ratio)) };
   }
   return {
     ...root,
-    first: setRatio(root.first, firstLeafId, ratio),
-    second: setRatio(root.second, firstLeafId, ratio),
+    first: setRatio(root.first, splitId, ratio),
+    second: setRatio(root.second, splitId, ratio),
   };
 }
 
@@ -57,7 +55,7 @@ export interface PaneSlice {
   splitPane: (workspaceId: string, paneId: string, direction: SplitDirection) => void;
   closePane: (workspaceId: string, paneId: string) => void;
   focusPane: (paneId: string) => void;
-  setSplitRatio: (workspaceId: string, firstLeafId: string, ratio: number) => void;
+  setSplitRatio: (workspaceId: string, splitId: string, ratio: number) => void;
 }
 
 export const createPaneSlice: StateCreator<PaneSlice> = (set, get) => ({
@@ -87,11 +85,11 @@ export const createPaneSlice: StateCreator<PaneSlice> = (set, get) => ({
 
   focusPane: (paneId) => set({ focusedPaneId: paneId }),
 
-  setSplitRatio: (workspaceId, firstLeafId, ratio) => {
+  setSplitRatio: (workspaceId, splitId, ratio) => {
     const root = get().paneRoots[workspaceId];
     if (!root) return;
     set((state) => ({
-      paneRoots: { ...state.paneRoots, [workspaceId]: setRatio(root, firstLeafId, ratio) },
+      paneRoots: { ...state.paneRoots, [workspaceId]: setRatio(root, splitId, ratio) },
     }));
   },
 });

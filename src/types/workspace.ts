@@ -14,6 +14,7 @@ export type PaneNode =
   | { kind: "leaf"; paneId: string }
   | {
       kind: "split";
+      id: string;
       direction: SplitDirection;
       ratio: number;
       first: PaneNode;

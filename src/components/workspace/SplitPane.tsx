@@ -3,7 +3,6 @@ import PaneWrapper from "./PaneWrapper";
 import PaneDivider from "./PaneDivider";
 import { PaneNode } from "../../types/workspace";
 import { useAppStore } from "../../store";
-import { getFirstLeafId } from "../../store/paneSlice";
 
 interface Props {
   node: PaneNode;
@@ -17,8 +16,7 @@ export default function SplitPane({ node, workspaceId }: Props) {
   const handleRatioChange = useCallback(
     (ratio: number) => {
       if (node.kind !== "split") return;
-      const firstLeafId = getFirstLeafId(node.first);
-      if (firstLeafId) setSplitRatio(workspaceId, firstLeafId, ratio);
+      setSplitRatio(workspaceId, node.id, ratio);
     },
     [node, workspaceId, setSplitRatio]
   );
