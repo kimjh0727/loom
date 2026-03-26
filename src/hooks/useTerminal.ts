@@ -58,6 +58,7 @@ export function useTerminal(
       cursorStyle: "block",
       scrollback: 5000,
       allowTransparency: true,
+      convertEol: true,
     });
 
     const fitAddon = new FitAddon();
