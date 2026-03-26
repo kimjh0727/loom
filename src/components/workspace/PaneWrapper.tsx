@@ -1,25 +1,26 @@
 import { useAppStore } from "../../store";
+import TerminalPane from "../terminal/TerminalPane";
 
 interface Props {
   paneId: string;
-  children?: React.ReactNode;
+  workspaceId: string;
 }
 
-export default function PaneWrapper({ paneId, children }: Props) {
+export default function PaneWrapper({ paneId, workspaceId }: Props) {
   const focusedPaneId = useAppStore((s) => s.focusedPaneId);
   const focusPane = useAppStore((s) => s.focusPane);
+  const splitPane = useAppStore((s) => s.splitPane);
+  const closePane = useAppStore((s) => s.closePane);
   const isFocused = paneId === focusedPaneId;
 
   return (
     <div
-      onClick={() => focusPane(paneId)}
+      onMouseDown={() => focusPane(paneId)}
       style={{
         flex: 1,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
-        position: "relative",
-        outline: "none",
         borderRadius: "var(--radius-sm)",
         border: isFocused
           ? "1px solid var(--border-focus)"
@@ -27,22 +28,13 @@ export default function PaneWrapper({ paneId, children }: Props) {
         transition: "border-color var(--transition-fast)",
       }}
     >
-      {/* 알림 링 (Phase 5-D에서 활성화) */}
-      {children ?? (
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--text-dim)",
-            fontSize: "var(--font-size-sm)",
-            background: "var(--bg-surface)",
-          }}
-        >
-          pane · {paneId.slice(0, 8)}
-        </div>
-      )}
+      <TerminalPane
+        paneId={paneId}
+        workspaceId={workspaceId}
+        onSplitRight={() => splitPane(workspaceId, paneId, "horizontal")}
+        onSplitDown={() => splitPane(workspaceId, paneId, "vertical")}
+        onClose={() => closePane(workspaceId, paneId)}
+      />
     </div>
   );
 }

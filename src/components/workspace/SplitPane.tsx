@@ -8,7 +8,7 @@ interface Props {
 
 export default function SplitPane({ node, workspaceId }: Props) {
   if (node.kind === "leaf") {
-    return <PaneWrapper paneId={node.paneId} />;
+    return <PaneWrapper paneId={node.paneId} workspaceId={workspaceId} />;
   }
 
   const isHorizontal = node.direction === "horizontal";
@@ -22,34 +22,49 @@ export default function SplitPane({ node, workspaceId }: Props) {
         flexDirection: isHorizontal ? "row" : "column",
         width: "100%",
         height: "100%",
-        gap: 2,
+        gap: 0,
         overflow: "hidden",
       }}
     >
-      <div style={{ [isHorizontal ? "width" : "height"]: firstSize, overflow: "hidden", display: "flex" }}>
+      <div
+        style={{
+          [isHorizontal ? "width" : "height"]: firstSize,
+          overflow: "hidden",
+          display: "flex",
+          flexShrink: 0,
+        }}
+      >
         <SplitPane node={node.first} workspaceId={workspaceId} />
       </div>
 
-      {/* Divider (Phase 3-C에서 드래그 기능 추가) */}
+      {/* 디바이더 (Phase 3-C에서 드래그 기능 추가) */}
       <div
         style={{
           flexShrink: 0,
           background: "var(--divider-bg)",
-          [isHorizontal ? "width" : "height"]: 2,
+          [isHorizontal ? "width" : "height"]: 3,
           cursor: isHorizontal ? "col-resize" : "row-resize",
           transition: "background var(--transition-fast)",
+          zIndex: 1,
         }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLDivElement).style.background =
-            "var(--divider-hover)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.background =
-            "var(--divider-bg)";
-        }}
+        onMouseEnter={(e) =>
+          ((e.currentTarget as HTMLDivElement).style.background =
+            "var(--divider-hover)")
+        }
+        onMouseLeave={(e) =>
+          ((e.currentTarget as HTMLDivElement).style.background =
+            "var(--divider-bg)")
+        }
       />
 
-      <div style={{ [isHorizontal ? "width" : "height"]: secondSize, overflow: "hidden", display: "flex" }}>
+      <div
+        style={{
+          [isHorizontal ? "width" : "height"]: secondSize,
+          overflow: "hidden",
+          display: "flex",
+          flexShrink: 0,
+        }}
+      >
         <SplitPane node={node.second} workspaceId={workspaceId} />
       </div>
     </div>
